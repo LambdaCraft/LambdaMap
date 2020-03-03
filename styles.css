@@ -20,7 +20,3 @@ ul {
 .icon-shadow {
     filter: drop-shadow(3px 5px 5px #222);
 }
-
-.leaflet-container {
-    background-color: #000;
-}

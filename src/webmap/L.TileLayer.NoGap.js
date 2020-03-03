@@ -1,4 +1,5 @@
 // @class TileLayer
+import L from 'leaflet'
 
 /*
 "THE BEER-WARE LICENSE":
@@ -6,8 +7,6 @@
 can do whatever you want with this stuff. If we meet some day, and you think
 this stuff is worth it, you can buy me a beer in return.
 */
-
-import L from 'leaflet'
 
 L.TileLayer.mergeOptions({
 	// @option keepBuffer

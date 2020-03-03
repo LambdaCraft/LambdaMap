@@ -11,21 +11,7 @@ import * as react from 'react';
 import * as reactDom from 'react-dom';
 import * as reactIs from 'react-is';
 
-const configBabel = () => babel({
-  "presets": [
-    ["@babel/env", {
-      "modules": false,
-      "targets": {
-          "browsers": ["last 2 versions"]
-      }
-    }],
-    ["@babel/preset-react"]
-  ],
-  "plugins": [
-    ["@babel/plugin-proposal-class-properties"]
-  ],
-  exclude: 'node_modules/**'
-})
+const configBabel = () => babel()
 
 
 // Fix problem with CJS detection of named imports in certain libs
@@ -43,7 +29,7 @@ const configReplace = () => replace({
 })
 
 const umdConfig = {
-  input: 'src/index.js',
+  input: 'src/index.umd.js',
   external: [
     'react', 
     'react-dom',
@@ -78,7 +64,6 @@ const cjsConfig = {
   input: 'src/index.js',
   external: [
     'react', 
-    'react-dom',
     'leaflet'
   ],
   plugins: [
@@ -93,4 +78,4 @@ const cjsConfig = {
   }
 }
 
-export default process.env.BUILD === 'production' ? [cjsConfig, umdConfig] : [umdConfig]
+export default process.env.BUILD === 'production' ? [umdConfig] : [umdConfig]

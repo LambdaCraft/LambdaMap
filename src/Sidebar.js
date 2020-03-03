@@ -4,8 +4,8 @@ import styled from 'styled-components'
 const DRAWER_WIDTH = 200
 
 const Drawer = styled.div`
-  position: fixed;
-  height: 100vh;
+  position: absolute;
+  height: 100%;
   width: ${DRAWER_WIDTH}px;
   top: 0;
   right: 0;
@@ -82,7 +82,7 @@ const Sidebar = ({
             key={p.UUID}
             name={p.Name}
             uuid={p.UUID}
-            active={p.Dimension.split(':')[1] === currentMap}
+            active={p.dimension === currentMap}
           />  
         )}
       </ul>
