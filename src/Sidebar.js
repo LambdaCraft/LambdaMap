@@ -5,6 +5,7 @@ const DRAWER_WIDTH = 200
 
 const Drawer = styled.div`
   position: absolute;
+  box-sizing: border-box;
   height: 100%;
   width: ${DRAWER_WIDTH}px;
   top: 0;
@@ -16,6 +17,35 @@ const Drawer = styled.div`
 
   & h3 {
     color: white;
+  }
+  transition: transform 0.25s ease;
+  transform: translate3d(0,0,0);
+
+  @media (max-width: 500px) {
+    width: 100%;
+    padding: 0 65px;
+    ${props => !props.open ? `
+      transform: translate3d(0,0,0);
+    ` : `
+      transform: translate3d(0,calc(100% - 32px),0);
+    `}
+  }
+`
+
+const Bar = styled.div`
+  width: 150px;
+  height: 2px;
+  background-color: white;
+  margin: 0 auto;
+`
+
+const ShowMore = styled((props) => (
+  <div {...props}><Bar /></div>
+))`
+  padding: 15px 25px;
+  margin: 0 auto;
+  @media (min-width: 501px) {
+    display: none;
   }
 `
 
@@ -59,10 +89,11 @@ const Sidebar = ({
   onMapChange,
   currentMap,
 }) => {
-  // const [open, setOpen] = React.useState(true)
+  const [open, setOpen] = React.useState(true)
 
   return (
-    <Drawer>
+    <Drawer open={open}>
+      <ShowMore onClick={() => setOpen(!open)} />
       <h3>Maps</h3>
       <ul>
         {maps.map(name =>
