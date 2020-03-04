@@ -32,7 +32,8 @@ const PlayerMarkers = ({ players, dimension }) => {
 
 export const LambdaMap = ({
   serverAPIURI,
-  tilesDir,
+  pollInterval,
+  tilesURI,
   ...props
 }) => {
   const mapRef = React.useRef(null)
@@ -48,7 +49,7 @@ export const LambdaMap = ({
       const configs = {}
       for (let i = 0; i < maps.length; i++) {
         const properties = await fetchJSON(
-          `${tilesDir}/${maps[i]}/tile.properties.json`,
+          `${tilesURI}/${maps[i]}/tile.properties.json`,
           {signal: abortControl.signal}
         )
         configs[maps[i]] = properties
@@ -125,7 +126,7 @@ export const LambdaMap = ({
         maxBounds={getMapBounds(selectedMap)}
       >
         <TileLayer
-          url={`${tilesDir}/${selectedMap}/z.{z}/r.{x}.{y}.png`}
+          url={`${tilesURI}/${selectedMap}/z.{z}/r.{x}.{y}.png`}
           attribution=""
           zoomOffset={0}
           maxZoom={1.6}
@@ -154,9 +155,11 @@ LambdaMap.propTypes = {
   serverAPIURI: PropTypes.string.isRequired,
   maps: PropTypes.arrayOf(PropTypes.string),
   selectedMap: PropTypes.string,
-  tilesDir: PropTypes.string,
+  tilesURI: PropTypes.string,
+  pollInterval: PropTypes.number,
 }
 
 LambdaMap.defaultProps = {
-  tilesDir: '/tiles',
+  tilesURI: '/tiles',
+  pollInterval: 3,
 }
