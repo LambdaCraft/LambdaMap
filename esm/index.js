@@ -68,8 +68,9 @@ var PlayerMarkers = function PlayerMarkers(_ref) {
 
 export var LambdaMap = function LambdaMap(_ref2) {
   var serverAPIURI = _ref2.serverAPIURI,
-      tilesDir = _ref2.tilesDir,
-      props = _objectWithoutProperties(_ref2, ["serverAPIURI", "tilesDir"]);
+      pollInterval = _ref2.pollInterval,
+      tilesURI = _ref2.tilesURI,
+      props = _objectWithoutProperties(_ref2, ["serverAPIURI", "pollInterval", "tilesURI"]);
 
   var mapRef = React.useRef(null);
 
@@ -113,7 +114,7 @@ export var LambdaMap = function LambdaMap(_ref2) {
                 }
 
                 _context.next = 5;
-                return fetchJSON("".concat(tilesDir, "/").concat(maps[i], "/tile.properties.json"), {
+                return fetchJSON("".concat(tilesURI, "/").concat(maps[i], "/tile.properties.json"), {
                   signal: abortControl.signal
                 });
 
@@ -205,7 +206,8 @@ export var LambdaMap = function LambdaMap(_ref2) {
     var minMapY = cfg.regions.minZ * ts;
     var mapWidth = (cfg.regions.maxX + 1 - cfg.regions.minX) * ts;
     var mapHeight = (cfg.regions.maxZ + 1 - cfg.regions.minZ) * ts;
-    var bounds = [[minMapX, minMapY], [minMapX + mapWidth, minMapY + mapHeight]];
+    var bounds = L.latLngBounds(L.latLng(minMapY, minMapX), L.latLng(minMapY + mapHeight, minMapX + mapWidth)).pad(0.75);
+    console.log('BOUNDS', bounds);
     return bounds;
   };
 
@@ -220,9 +222,10 @@ export var LambdaMap = function LambdaMap(_ref2) {
     crs: L.CRS.Simple,
     center: [0, 0],
     zoom: 0,
-    maxBounds: getMapBounds(selectedMap)
+    maxBounds: getMapBounds(selectedMap),
+    maxBoundsViscosity: 0.0
   }, React.createElement(TileLayer, {
-    url: "".concat(tilesDir, "/").concat(selectedMap, "/z.{z}/r.{x}.{y}.png"),
+    url: "".concat(tilesURI, "/").concat(selectedMap, "/z.{z}/r.{x}.{y}.png"),
     attribution: "",
     zoomOffset: 0,
     maxZoom: 1.6,
@@ -231,7 +234,8 @@ export var LambdaMap = function LambdaMap(_ref2) {
     tileSize: configs[selectedMap].tileSize,
     detectRetina: false,
     updateWhenZooming: false,
-    bounds: getMapBounds(selectedMap)
+    bounds: getMapBounds(selectedMap),
+    errorTileUrl: "".concat(tilesURI, "/").concat(selectedMap, "/error.png")
   }), React.createElement(PlayerMarkers, {
     players: players,
     dimension: configs[selectedMap].dimension
@@ -248,8 +252,10 @@ LambdaMap.propTypes = {
   serverAPIURI: PropTypes.string.isRequired,
   maps: PropTypes.arrayOf(PropTypes.string),
   selectedMap: PropTypes.string,
-  tilesDir: PropTypes.string
+  tilesURI: PropTypes.string,
+  pollInterval: PropTypes.number
 };
 LambdaMap.defaultProps = {
-  tilesDir: '/tiles'
+  tilesURI: '/tiles',
+  pollInterval: 3
 };

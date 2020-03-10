@@ -99,11 +99,12 @@ export const LambdaMap = ({
     const minMapY = cfg.regions.minZ * ts
     const mapWidth = (cfg.regions.maxX + 1 - cfg.regions.minX) * ts
     const mapHeight = (cfg.regions.maxZ + 1 - cfg.regions.minZ) * ts
-    const bounds = [[
-      minMapX, minMapY
-    ],[
-      minMapX + mapWidth, minMapY + mapHeight
-    ]]
+    const bounds = L.latLngBounds(
+      L.latLng(minMapY, minMapX),
+      L.latLng(minMapY + mapHeight, minMapX + mapWidth)
+    ).pad(0.75)
+
+    console.log('BOUNDS', bounds)
 
     return bounds
   }
@@ -124,6 +125,7 @@ export const LambdaMap = ({
         center={[0,0]}
         zoom={0}
         maxBounds={getMapBounds(selectedMap)}
+        maxBoundsViscosity={0.0}
       >
         <TileLayer
           url={`${tilesURI}/${selectedMap}/z.{z}/r.{x}.{y}.png`}
@@ -136,6 +138,7 @@ export const LambdaMap = ({
           detectRetina={false}
           updateWhenZooming={false}
           bounds={getMapBounds(selectedMap)}
+          errorTileUrl={`${tilesURI}/${selectedMap}/error.png`}
         />
         <PlayerMarkers players={players} dimension={configs[selectedMap].dimension} />
       </LMap>
