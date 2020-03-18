@@ -1,8 +1,9 @@
 {
-  "name": "lambdamap",
-  "version": "1.0.2",
-  "description": "Wrapper around leaflet for rendering MC maps",
+  "name": "@lambdamc/map",
+  "version": "1.1.2",
+  "description": "Wrapper around leaflet for rendering Minecraft maps",
   "scripts": {
+    "prepublish": "yarn build",
     "build": "rollup -c --environment BUILD:production && npx babel src --out-dir esm",
     "develop": "rollup -c --environment BUILD:development --watch"
   },
@@ -17,6 +18,8 @@
   "dependencies": {
     "core-js": "^3.6.4",
     "leaflet": "^1.6.0",
+    "lodash": "^4.17.15",
+    "react-icons": "^3.9.0",
     "react-leaflet": "^2.6.1",
     "react-proptypes": "^1.0.0",
     "styled-components": "^5.0.1"
