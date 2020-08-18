@@ -8,11 +8,15 @@ function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
-function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
 
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 
-function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _iterableToArrayLimit(arr, i) { if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return; var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
@@ -21,7 +25,7 @@ function _objectWithoutProperties(source, excluded) { if (source == null) return
 function _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }
 
 function _templateObject() {
-  var data = _taggedTemplateLiteral(["\n  height: 100%;\n  background-color: #000;\n  position: relative;\n"]);
+  var data = _taggedTemplateLiteral(["\n  height: 100%;\n  background-color: #000;\n  position: relative;\n\n  & .icon-shadow {\n    filter: drop-shadow(3px 5px 5px #222);\n  }\n"]);
 
   _templateObject = function _templateObject() {
     return data;
@@ -38,9 +42,10 @@ import React from 'react';
 import PropTypes from 'react-proptypes';
 import styled from 'styled-components';
 import L from 'leaflet';
-import { Map as LMap, Marker, Tooltip, TileLayer } from 'react-leaflet';
+import { Map as LMap, Marker, Tooltip, TileLayer, useLeaflet } from 'react-leaflet';
 import Sidebar from './Sidebar';
-var Stretch = styled.div(_templateObject());
+import MouseCoordinates from './MouseCoordinates';
+var Container = styled.div(_templateObject());
 
 var fetchJSON = function fetchJSON() {
   return fetch.apply(void 0, arguments).then(function (r) {
@@ -55,38 +60,49 @@ var getPlayerName = function getPlayerName(p) {
 var PlayerMarkers = function PlayerMarkers(_ref) {
   var players = _ref.players,
       dimension = _ref.dimension;
-  return React.createElement(React.Fragment, null, players.filter(function (p) {
+  return /*#__PURE__*/React.createElement(React.Fragment, null, players.filter(function (p) {
     return dimension === p.dimension;
   }).map(function (p) {
-    return React.createElement(Marker, {
+    return /*#__PURE__*/React.createElement(Marker, {
       position: p.markerPosition,
       icon: p.icon,
       key: p.name
-    }, React.createElement(Tooltip, null, p.name));
+    }, /*#__PURE__*/React.createElement(Tooltip, null, p.name));
   }));
+};
+
+var TileLayerWrapper = function TileLayerWrapper(props) {
+  var _useLeaflet = useLeaflet(),
+      map = _useLeaflet.map;
+
+  React.useEffect(function () {
+    map.options.minZoom = props.minZoom;
+    map.fitBounds(props.bounds);
+  }, [props.bounds, props.minZoom]);
+  return /*#__PURE__*/React.createElement(TileLayer, props);
 };
 
 export var LambdaMap = function LambdaMap(_ref2) {
   var serverAPIURI = _ref2.serverAPIURI,
       pollInterval = _ref2.pollInterval,
       tilesURI = _ref2.tilesURI,
-      props = _objectWithoutProperties(_ref2, ["serverAPIURI", "pollInterval", "tilesURI"]);
+      maps = _ref2.maps,
+      props = _objectWithoutProperties(_ref2, ["serverAPIURI", "pollInterval", "tilesURI", "maps"]);
 
-  var mapRef = React.useRef(null);
+  var _React$useState = React.useState(null),
+      _React$useState2 = _slicedToArray(_React$useState, 2),
+      configs = _React$useState2[0],
+      setConfigs = _React$useState2[1];
 
-  var _React$useState = React.useState(props.maps),
-      _React$useState2 = _slicedToArray(_React$useState, 1),
-      maps = _React$useState2[0];
-
-  var _React$useState3 = React.useState(null),
+  var _React$useState3 = React.useState([]),
       _React$useState4 = _slicedToArray(_React$useState3, 2),
-      configs = _React$useState4[0],
-      setConfigs = _React$useState4[1];
+      players = _React$useState4[0],
+      setPlayers = _React$useState4[1];
 
-  var _React$useState5 = React.useState([]),
+  var _React$useState5 = React.useState(null),
       _React$useState6 = _slicedToArray(_React$useState5, 2),
-      players = _React$useState6[0],
-      setPlayers = _React$useState6[1];
+      error = _React$useState6[0],
+      setError = _React$useState6[1];
 
   var _React$useState7 = React.useState(props.selectedMap || maps[0]),
       _React$useState8 = _slicedToArray(_React$useState7, 2),
@@ -96,47 +112,55 @@ export var LambdaMap = function LambdaMap(_ref2) {
 
   React.useEffect(function () {
     var abortControl = new AbortController();
+    var errorWait = 1000;
 
     var fetchAll = /*#__PURE__*/function () {
       var _ref3 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
-        var configs, i, properties;
+        var configs, properties;
         return regeneratorRuntime.wrap(function _callee$(_context) {
           while (1) {
             switch (_context.prev = _context.next) {
               case 0:
                 configs = {};
-                i = 0;
+                _context.prev = 1;
+                _context.next = 4;
+                return Promise.all(maps.map(function (name) {
+                  return fetchJSON("".concat(tilesURI, "/").concat(name, "/tile.properties.json"), {
+                    signal: abortControl.signal
+                  }).then(function (props) {
+                    return [name, props];
+                  });
+                }));
 
-              case 2:
-                if (!(i < maps.length)) {
-                  _context.next = 10;
-                  break;
-                }
-
-                _context.next = 5;
-                return fetchJSON("".concat(tilesURI, "/").concat(maps[i], "/tile.properties.json"), {
-                  signal: abortControl.signal
-                });
-
-              case 5:
+              case 4:
                 properties = _context.sent;
-                configs[maps[i]] = properties;
+                properties.forEach(function (_ref4) {
+                  var _ref5 = _slicedToArray(_ref4, 2),
+                      name = _ref5[0],
+                      props = _ref5[1];
 
-              case 7:
-                i++;
-                _context.next = 2;
+                  configs[name] = props;
+                });
+                setConfigs(configs);
+                errorWait = 1000;
+                _context.next = 15;
                 break;
 
               case 10:
-                console.log(configs);
-                setConfigs(configs);
+                _context.prev = 10;
+                _context.t0 = _context["catch"](1);
+                console.warn('Failed to get map properties');
+                setTimeout(function () {
+                  return fetchAll();
+                }, errorWait);
+                errorWait = Math.min(20000, errorWait * (Math.random() * 0.5 + 1.75));
 
-              case 12:
+              case 15:
               case "end":
                 return _context.stop();
             }
           }
-        }, _callee);
+        }, _callee, null, [[1, 10]]);
       }));
 
       return function fetchAll() {
@@ -151,20 +175,22 @@ export var LambdaMap = function LambdaMap(_ref2) {
   }, [maps]);
   React.useEffect(function () {
     var fetchStatus = /*#__PURE__*/function () {
-      var _ref4 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2() {
-        var status, players, mapped;
+      var _ref6 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2() {
+        var status, _players, mapped;
+
         return regeneratorRuntime.wrap(function _callee2$(_context2) {
           while (1) {
             switch (_context2.prev = _context2.next) {
               case 0:
-                _context2.next = 2;
+                _context2.prev = 0;
+                _context2.next = 3;
                 return fetchJSON(serverAPIURI);
 
-              case 2:
+              case 3:
                 status = _context2.sent;
-                players = status.Players;
-                mapped = players.map(function (p) {
-                  return _objectSpread({}, p, {
+                _players = status.Players;
+                mapped = _players.map(function (p) {
+                  return _objectSpread(_objectSpread({}, p), {}, {
                     icon: L.icon({
                       iconUrl: "https://crafatar.com/renders/body/".concat(p.UUID.replace('-', ''), "?scale=1"),
                       iconSize: [20, 45],
@@ -178,28 +204,37 @@ export var LambdaMap = function LambdaMap(_ref2) {
                   });
                 });
                 setPlayers(mapped);
+                setError(null);
+                _context2.next = 13;
+                break;
 
-              case 6:
+              case 10:
+                _context2.prev = 10;
+                _context2.t0 = _context2["catch"](0);
+                setError('Could not get player status');
+
+              case 13:
               case "end":
                 return _context2.stop();
             }
           }
-        }, _callee2);
+        }, _callee2, null, [[0, 10]]);
       }));
 
       return function fetchStatus() {
-        return _ref4.apply(this, arguments);
+        return _ref6.apply(this, arguments);
       };
     }();
 
     fetchStatus();
-    var interval = setInterval(fetchStatus, 20000);
+    var interval = setInterval(fetchStatus, pollInterval * 1000);
     return function () {
       return clearInterval(interval);
     };
   }, []);
 
   var getMapBounds = function getMapBounds(sel) {
+    if (!configs) return;
     var cfg = configs[sel];
     var ts = cfg.tileSize;
     var minMapX = cfg.regions.minX * ts;
@@ -207,24 +242,19 @@ export var LambdaMap = function LambdaMap(_ref2) {
     var mapWidth = (cfg.regions.maxX + 1 - cfg.regions.minX) * ts;
     var mapHeight = (cfg.regions.maxZ + 1 - cfg.regions.minZ) * ts;
     var bounds = L.latLngBounds(L.latLng(minMapY, minMapX), L.latLng(minMapY + mapHeight, minMapX + mapWidth)).pad(0.75);
-    console.log('BOUNDS', bounds);
     return bounds;
   };
 
-  React.useEffect(function () {
-    if (!mapRef.current) return;
-    var leafmap = mapRef.current.leafletElement;
-    leafmap.options.minZoom = configs[selectedMap].minZoom;
-    leafmap.setView([0, 0], 0);
-  }, [mapRef.current, selectedMap]);
-  return configs ? React.createElement(Stretch, null, React.createElement("style", null, ".leaflet-container { height: 100%; background-color: #000; }"), React.createElement(LMap, {
-    ref: mapRef,
+  var bounds = React.useMemo(function () {
+    return getMapBounds(selectedMap);
+  }, [selectedMap, configs]);
+  return configs ? /*#__PURE__*/React.createElement(Container, null, /*#__PURE__*/React.createElement("style", null, ".leaflet-container { height: 100%; background-color: #000; }"), /*#__PURE__*/React.createElement(LMap, {
     crs: L.CRS.Simple,
-    center: [0, 0],
     zoom: 0,
-    maxBounds: getMapBounds(selectedMap),
+    center: [0, 0],
+    maxBounds: bounds,
     maxBoundsViscosity: 0.0
-  }, React.createElement(TileLayer, {
+  }, /*#__PURE__*/React.createElement(TileLayerWrapper, {
     url: "".concat(tilesURI, "/").concat(selectedMap, "/z.{z}/r.{x}.{y}.png"),
     attribution: "",
     zoomOffset: 0,
@@ -234,19 +264,25 @@ export var LambdaMap = function LambdaMap(_ref2) {
     tileSize: configs[selectedMap].tileSize,
     detectRetina: false,
     updateWhenZooming: false,
-    bounds: getMapBounds(selectedMap),
-    errorTileUrl: "".concat(tilesURI, "/").concat(selectedMap, "/error.png")
-  }), React.createElement(PlayerMarkers, {
+    bounds: bounds
+  }), /*#__PURE__*/React.createElement(PlayerMarkers, {
     players: players,
     dimension: configs[selectedMap].dimension
-  })), React.createElement(Sidebar, {
+  }), /*#__PURE__*/React.createElement(MouseCoordinates, null), /*#__PURE__*/React.createElement(Sidebar, {
     players: players,
-    maps: maps,
+    maps: maps.map(function (id) {
+      return {
+        name: configs[id].mapName,
+        dimension: configs[id].dimension,
+        id: id
+      };
+    }),
+    error: error,
     onMapChange: function onMapChange(sel) {
-      setSelectedMap(configs[sel].mapName);
+      setSelectedMap(sel);
     },
     currentMap: selectedMap
-  })) : null;
+  }))) : null;
 };
 LambdaMap.propTypes = {
   serverAPIURI: PropTypes.string.isRequired,

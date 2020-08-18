@@ -1,5 +1,7 @@
 import React from 'react'
 import styled from 'styled-components'
+import { MdErrorOutline } from 'react-icons/md'
+import { useLeaflet } from 'react-leaflet'
 
 const DRAWER_WIDTH = 200
 
@@ -14,9 +16,15 @@ const Drawer = styled.div`
   background-color: rgba(0,0,0,0.6);
   z-index: 500;
   color: #999;
+  cursor: default;
 
   & h3 {
     color: white;
+    font-size: 18px;
+    & svg {
+      vertical-align: text-top;
+      cursor: help;
+    }
   }
   transition: transform 0.25s ease;
   transform: translate3d(0,0,0);
@@ -88,32 +96,38 @@ const Sidebar = ({
   maps,
   onMapChange,
   currentMap,
+  error,
 }) => {
   const [open, setOpen] = React.useState(true)
+  const leaflet = useLeaflet()
+  const cmap = maps.find(m => m.id === currentMap)
 
   return (
     <Drawer open={open}>
       <ShowMore onClick={() => setOpen(!open)} />
       <h3>Maps</h3>
       <ul>
-        {maps.map(name =>
+        {maps.map(map =>
           <ListItem
-            key={name}
-            onClick={() => onMapChange(name)}
-            active={currentMap === name}
+            key={map.id}
+            onClick={() => onMapChange(map.id)}
+            active={cmap.id === map.id}
           >
-            {name}
+            {map.name}
           </ListItem>
         )}
       </ul>
-      <h3>Online</h3>
+      <h3>Online { error ? <MdErrorOutline title={error} /> : null }</h3>
       <ul>
         {players.map(p =>
           <PlayerListItem
+            onClick={p.dimension === cmap.dimension ? () => {
+              leaflet.map.setView(p.markerPosition, 0)
+            } : null}
             key={p.UUID}
             name={p.Name}
             uuid={p.UUID}
-            active={p.dimension === currentMap}
+            active={p.dimension === cmap.dimension}
           />  
         )}
       </ul>

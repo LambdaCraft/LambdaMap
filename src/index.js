@@ -5,14 +5,19 @@ import React from 'react'
 import PropTypes from 'react-proptypes'
 import styled from 'styled-components'
 import L from 'leaflet'
-import { Map as LMap, Marker, Tooltip, TileLayer } from 'react-leaflet'
+import { Map as LMap, Marker, Tooltip, TileLayer, useLeaflet } from 'react-leaflet'
 
 import Sidebar from './Sidebar'
+import MouseCoordinates from './MouseCoordinates'
 
-const Stretch = styled.div`
+const Container = styled.div`
   height: 100%;
   background-color: #000;
   position: relative;
+
+  & .icon-shadow {
+    filter: drop-shadow(3px 5px 5px #222);
+  }
 `
 
 const fetchJSON = (...args) => fetch(...args).then(r => r.json())
@@ -30,32 +35,53 @@ const PlayerMarkers = ({ players, dimension }) => {
   )
 }
 
+const TileLayerWrapper = (props) => {
+  const { map } = useLeaflet()
+
+  React.useEffect(() => {
+    map.options.minZoom = props.minZoom
+
+    map.fitBounds(props.bounds)
+  }, [props.bounds, props.minZoom])
+
+  return <TileLayer {...props} />
+}
+
 export const LambdaMap = ({
   serverAPIURI,
   pollInterval,
   tilesURI,
+  maps,
   ...props
 }) => {
-  const mapRef = React.useRef(null)
-  const [maps] = React.useState(props.maps)
   const [configs, setConfigs] = React.useState(null)
   const [players, setPlayers] = React.useState([])
+  const [error, setError] = React.useState(null)
   const [selectedMap, setSelectedMap] = React.useState(props.selectedMap || maps[0])
 
   // Fetch map properties for server and dimension
   React.useEffect(() => {
     const abortControl = new AbortController();
+    let errorWait = 1000
     const fetchAll = async () => {
       const configs = {}
-      for (let i = 0; i < maps.length; i++) {
-        const properties = await fetchJSON(
-          `${tilesURI}/${maps[i]}/tile.properties.json`,
-          {signal: abortControl.signal}
+      try {
+        const properties = await Promise.all(maps.map(name => 
+          fetchJSON(
+            `${tilesURI}/${name}/tile.properties.json`,
+            {signal: abortControl.signal}
+          ).then(props => [name, props]))
         )
-        configs[maps[i]] = properties
+        properties.forEach(([name, props]) => {
+          configs[name] = props
+        })
+        setConfigs(configs)
+        errorWait = 1000
+      } catch(e) {
+        console.warn('Failed to get map properties')
+        setTimeout(() => fetchAll(), errorWait)
+        errorWait = Math.min(20000, errorWait * (Math.random()*0.5+1.75))
       }
-      console.log(configs)
-      setConfigs(configs)
     }
 
     fetchAll()
@@ -66,32 +92,38 @@ export const LambdaMap = ({
 
   React.useEffect(() => {
     const fetchStatus = async () => {
-      const status = await fetchJSON(serverAPIURI)
-      const players = status.Players
-
-      const mapped = players.map(p => ({
-        ...p,
-        icon: L.icon({
-          iconUrl: `https://crafatar.com/renders/body/${p.UUID.replace('-','')}?scale=1`,
-          iconSize: [20, 45],
-          iconAnchor: [10, 45],
-          className: 'icon-shadow'
-        }),
-        markerPosition: [-p.Z, p.X],
-        position: [p.X, p.Z],
-        dimension: p.Dimension.split(':')[1],
-        name: `${getPlayerName(p)}: (${Math.round(p.X)}, ${Math.round(p.Z)})`,
-      }))
-
-      setPlayers(mapped)
+      try {
+        const status = await fetchJSON(serverAPIURI)
+        const players = status.Players
+  
+        const mapped = players.map(p => ({
+          ...p,
+          icon: L.icon({
+            iconUrl: `https://crafatar.com/renders/body/${p.UUID.replace('-','')}?scale=1`,
+            iconSize: [20, 45],
+            iconAnchor: [10, 45],
+            className: 'icon-shadow'
+          }),
+          markerPosition: [-p.Z, p.X],
+          position: [p.X, p.Z],
+          dimension: p.Dimension.split(':')[1],
+          name: `${getPlayerName(p)}: (${Math.round(p.X)}, ${Math.round(p.Z)})`,
+        }))
+  
+        setPlayers(mapped)
+        setError(null)
+      } catch(err) {
+        setError('Could not get player status')
+      }
     }
 
     fetchStatus()
-    const interval = setInterval(fetchStatus, 20000)
+    const interval = setInterval(fetchStatus, pollInterval*1000)
     return () => clearInterval(interval)
   }, [])
 
   const getMapBounds = sel => {
+    if (!configs) return
     const cfg = configs[sel]
     const ts = cfg.tileSize
 
@@ -104,30 +136,22 @@ export const LambdaMap = ({
       L.latLng(minMapY + mapHeight, minMapX + mapWidth)
     ).pad(0.75)
 
-    console.log('BOUNDS', bounds)
-
     return bounds
   }
 
-  React.useEffect(() => {
-    if (!mapRef.current) return
-    const leafmap = mapRef.current.leafletElement
-    leafmap.options.minZoom = configs[selectedMap].minZoom
-    leafmap.setView([0,0], 0)
-  }, [mapRef.current, selectedMap])
+  const bounds = React.useMemo(() => getMapBounds(selectedMap), [selectedMap, configs])
 
   return configs ? (
-    <Stretch>
+    <Container>
       <style>{".leaflet-container { height: 100%; background-color: #000; }"}</style>
       <LMap
-        ref={mapRef}
         crs={L.CRS.Simple}
-        center={[0,0]}
         zoom={0}
-        maxBounds={getMapBounds(selectedMap)}
+        center={[0,0]}
+        maxBounds={bounds}
         maxBoundsViscosity={0.0}
       >
-        <TileLayer
+        <TileLayerWrapper
           url={`${tilesURI}/${selectedMap}/z.{z}/r.{x}.{y}.png`}
           attribution=""
           zoomOffset={0}
@@ -137,20 +161,26 @@ export const LambdaMap = ({
           tileSize={configs[selectedMap].tileSize}
           detectRetina={false}
           updateWhenZooming={false}
-          bounds={getMapBounds(selectedMap)}
-          errorTileUrl={`${tilesURI}/${selectedMap}/error.png`}
+          bounds={bounds}
         />
         <PlayerMarkers players={players} dimension={configs[selectedMap].dimension} />
+
+        <MouseCoordinates />
+        <Sidebar
+          players={players}
+          maps={maps.map(id => ({
+            name: configs[id].mapName,
+            dimension: configs[id].dimension,
+            id,
+          }))}
+          error={error}
+          onMapChange={sel => {
+            setSelectedMap(sel)
+          }}
+          currentMap={selectedMap}
+        />
       </LMap>
-      <Sidebar
-        players={players}
-        maps={maps}
-        onMapChange={sel => {
-          setSelectedMap(configs[sel].mapName)
-        }}
-        currentMap={selectedMap}
-      />
-    </Stretch>
+    </Container>
   ) :  null
 }
 
