@@ -38,7 +38,6 @@ export default class WebMap {
     })
   
     this.map.on('baselayerchange', e => {
-      console.log('CHANGE', e)
       this.configureMap(e.name)
     })
   
@@ -64,11 +63,9 @@ export default class WebMap {
 
   selectTiles = sel => {
     const dimension = this.configs[sel].dimension
-    console.log('REMOVING', this.selected, this.dimension)
     this.map.removeLayer(this.groups.base[this.selected])
     this.map.removeLayer(this.groups.players[this.dimension])
     this.map.removeLayer(this.groups.poi[this.dimension])
-    console.log('ADDING', sel, dimension)
     this.map.addLayer(this.groups.base[sel])
     this.map.addLayer(this.groups.players[dimension])
     this.map.addLayer(this.groups.poi[dimension])
