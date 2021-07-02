@@ -35,14 +35,30 @@ const PlayerMarkers = ({ players, dimension }) => {
   )
 }
 
+const calcLeafletBoundsFromRegBounds = (regionBounds, tileSize, pad = 0.75) => {
+  const{ minX, maxX, minZ, maxZ } = regionBounds
+  const minMapX = minX * tileSize
+  const minMapY = minZ * tileSize
+  const mapWidth = (maxX + 1 - minX) * tileSize
+  const mapHeight = (maxZ + 1 - minZ) * tileSize
+  return L.latLngBounds(
+    L.latLng(minMapY, minMapX),
+    L.latLng(minMapY + mapHeight, minMapX + mapWidth)
+  ).pad(pad)
+}
+
 const TileLayerWrapper = (props) => {
   const { map } = useLeaflet()
 
   React.useEffect(() => {
     map.options.minZoom = props.minZoom
 
-    map.fitBounds(props.bounds)
-  }, [props.bounds, props.minZoom])
+    if (props.defaultZoom !== undefined) {
+      map.setView(props.defaultCenter || [0,0], props.defaultZoom)
+    } else {
+      map.fitBounds(props.bounds)
+    }
+  }, [props.bounds, props.defaultCenter, props.defaultZoom, props.minZoom])
 
   return <TileLayer {...props} />
 }
@@ -122,24 +138,11 @@ export const LambdaMap = ({
     return () => clearInterval(interval)
   }, [])
 
-  const getMapBounds = sel => {
+  const bounds = React.useMemo(() => {
     if (!configs) return
-    const cfg = configs[sel]
-    const ts = cfg.tileSize
-
-    const minMapX = cfg.regions.minX * ts
-    const minMapY = cfg.regions.minZ * ts
-    const mapWidth = (cfg.regions.maxX + 1 - cfg.regions.minX) * ts
-    const mapHeight = (cfg.regions.maxZ + 1 - cfg.regions.minZ) * ts
-    const bounds = L.latLngBounds(
-      L.latLng(minMapY, minMapX),
-      L.latLng(minMapY + mapHeight, minMapX + mapWidth)
-    ).pad(0.75)
-
-    return bounds
-  }
-
-  const bounds = React.useMemo(() => getMapBounds(selectedMap), [selectedMap, configs])
+    const cfg = configs[selectedMap]
+    return calcLeafletBoundsFromRegBounds(cfg.regions, cfg.tileSize)
+  }, [selectedMap, configs])
 
   return configs ? (
     <Container>
@@ -162,6 +165,8 @@ export const LambdaMap = ({
           detectRetina={false}
           updateWhenZooming={false}
           bounds={bounds}
+          defaultZoom={configs[selectedMap].default?.zoom}
+          defaultCenter={configs[selectedMap].default?.center}
         />
         <PlayerMarkers players={players} dimension={configs[selectedMap].dimension} />
 

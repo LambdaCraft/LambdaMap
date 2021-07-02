@@ -1,4 +1,8 @@
-function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+var _excluded = ["serverAPIURI", "pollInterval", "tilesURI", "maps"];
+
+var _templateObject;
+
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) { symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); } keys.push.apply(keys, symbols); } return keys; }
 
 function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 
@@ -16,23 +20,13 @@ function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o =
 
 function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
 
-function _iterableToArrayLimit(arr, i) { if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return; var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+function _iterableToArrayLimit(arr, i) { var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"]; if (_i == null) return; var _arr = []; var _n = true; var _d = false; var _s, _e; try { for (_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
 function _objectWithoutProperties(source, excluded) { if (source == null) return {}; var target = _objectWithoutPropertiesLoose(source, excluded); var key, i; if (Object.getOwnPropertySymbols) { var sourceSymbolKeys = Object.getOwnPropertySymbols(source); for (i = 0; i < sourceSymbolKeys.length; i++) { key = sourceSymbolKeys[i]; if (excluded.indexOf(key) >= 0) continue; if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue; target[key] = source[key]; } } return target; }
 
 function _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }
-
-function _templateObject() {
-  var data = _taggedTemplateLiteral(["\n  height: 100%;\n  background-color: #000;\n  position: relative;\n\n  & .icon-shadow {\n    filter: drop-shadow(3px 5px 5px #222);\n  }\n"]);
-
-  _templateObject = function _templateObject() {
-    return data;
-  };
-
-  return data;
-}
 
 function _taggedTemplateLiteral(strings, raw) { if (!raw) { raw = strings.slice(0); } return Object.freeze(Object.defineProperties(strings, { raw: { value: Object.freeze(raw) } })); }
 
@@ -45,7 +39,7 @@ import L from 'leaflet';
 import { Map as LMap, Marker, Tooltip, TileLayer, useLeaflet } from 'react-leaflet';
 import Sidebar from './Sidebar';
 import MouseCoordinates from './MouseCoordinates';
-var Container = styled.div(_templateObject());
+var Container = styled.div(_templateObject || (_templateObject = _taggedTemplateLiteral(["\n  height: 100%;\n  background-color: #000;\n  position: relative;\n\n  & .icon-shadow {\n    filter: drop-shadow(3px 5px 5px #222);\n  }\n"])));
 
 var fetchJSON = function fetchJSON() {
   return fetch.apply(void 0, arguments).then(function (r) {
@@ -71,23 +65,43 @@ var PlayerMarkers = function PlayerMarkers(_ref) {
   }));
 };
 
+var calcLeafletBoundsFromRegBounds = function calcLeafletBoundsFromRegBounds(regionBounds, tileSize) {
+  var pad = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0.75;
+  var minX = regionBounds.minX,
+      maxX = regionBounds.maxX,
+      minZ = regionBounds.minZ,
+      maxZ = regionBounds.maxZ;
+  var minMapX = minX * tileSize;
+  var minMapY = minZ * tileSize;
+  var mapWidth = (maxX + 1 - minX) * tileSize;
+  var mapHeight = (maxZ + 1 - minZ) * tileSize;
+  return L.latLngBounds(L.latLng(minMapY, minMapX), L.latLng(minMapY + mapHeight, minMapX + mapWidth)).pad(pad);
+};
+
 var TileLayerWrapper = function TileLayerWrapper(props) {
   var _useLeaflet = useLeaflet(),
       map = _useLeaflet.map;
 
   React.useEffect(function () {
     map.options.minZoom = props.minZoom;
-    map.fitBounds(props.bounds);
-  }, [props.bounds, props.minZoom]);
+
+    if (props.defaultZoom !== undefined) {
+      map.setView(props.defaultCenter || [0, 0], props.defaultZoom);
+    } else {
+      map.fitBounds(props.bounds);
+    }
+  }, [props.bounds, props.defaultCenter, props.defaultZoom, props.minZoom]);
   return /*#__PURE__*/React.createElement(TileLayer, props);
 };
 
 export var LambdaMap = function LambdaMap(_ref2) {
+  var _configs$selectedMap$, _configs$selectedMap$2;
+
   var serverAPIURI = _ref2.serverAPIURI,
       pollInterval = _ref2.pollInterval,
       tilesURI = _ref2.tilesURI,
       maps = _ref2.maps,
-      props = _objectWithoutProperties(_ref2, ["serverAPIURI", "pollInterval", "tilesURI", "maps"]);
+      props = _objectWithoutProperties(_ref2, _excluded);
 
   var _React$useState = React.useState(null),
       _React$useState2 = _slicedToArray(_React$useState, 2),
@@ -232,21 +246,10 @@ export var LambdaMap = function LambdaMap(_ref2) {
       return clearInterval(interval);
     };
   }, []);
-
-  var getMapBounds = function getMapBounds(sel) {
-    if (!configs) return;
-    var cfg = configs[sel];
-    var ts = cfg.tileSize;
-    var minMapX = cfg.regions.minX * ts;
-    var minMapY = cfg.regions.minZ * ts;
-    var mapWidth = (cfg.regions.maxX + 1 - cfg.regions.minX) * ts;
-    var mapHeight = (cfg.regions.maxZ + 1 - cfg.regions.minZ) * ts;
-    var bounds = L.latLngBounds(L.latLng(minMapY, minMapX), L.latLng(minMapY + mapHeight, minMapX + mapWidth)).pad(0.75);
-    return bounds;
-  };
-
   var bounds = React.useMemo(function () {
-    return getMapBounds(selectedMap);
+    if (!configs) return;
+    var cfg = configs[selectedMap];
+    return calcLeafletBoundsFromRegBounds(cfg.regions, cfg.tileSize);
   }, [selectedMap, configs]);
   return configs ? /*#__PURE__*/React.createElement(Container, null, /*#__PURE__*/React.createElement("style", null, ".leaflet-container { height: 100%; background-color: #000; }"), /*#__PURE__*/React.createElement(LMap, {
     crs: L.CRS.Simple,
@@ -264,7 +267,9 @@ export var LambdaMap = function LambdaMap(_ref2) {
     tileSize: configs[selectedMap].tileSize,
     detectRetina: false,
     updateWhenZooming: false,
-    bounds: bounds
+    bounds: bounds,
+    defaultZoom: (_configs$selectedMap$ = configs[selectedMap].default) === null || _configs$selectedMap$ === void 0 ? void 0 : _configs$selectedMap$.zoom,
+    defaultCenter: (_configs$selectedMap$2 = configs[selectedMap].default) === null || _configs$selectedMap$2 === void 0 ? void 0 : _configs$selectedMap$2.center
   }), /*#__PURE__*/React.createElement(PlayerMarkers, {
     players: players,
     dimension: configs[selectedMap].dimension
